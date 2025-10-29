@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任務管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>任務管理系統</h1>
+    </header>
+
+    <main id="app-container">
+        <section id="auth-container">
+            <h2>登入或註冊</h2>
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="電子郵件" required>
+                <input type="password" id="login-password" placeholder="密碼" required>
+                <button type="submit">登入</button>
+                <button type="button" id="register-button">還沒有帳號？點此註冊</button>
+            </form>
+        </section>
+
+        <section id="task-dashboard" style="display: none;">
+            <p>歡迎, <span id="user-email"></span>！ <button id="logout-button">登出</button></p>
+    
+            <form id="create-task-form">
+                <h3>新增任務</h3>
+        
+                <div class="form-group">
+                    <label for="summary">任務標題：</label>
+                    <input type="text" id="summary" placeholder="任務標題" required>
+                </div>
+        
+                <div class="form-group">
+                    <label for="task-desc">任務描述：</label>
+                    <textarea id="task-desc" placeholder="任務描述..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-top: 10px;">
+                    <label for="assign-to-user">指派給：</label>
+                    <select id="assign-to-user">
+                        <option value="">-- 暫不指派 --</option>
+                        </select>
+                </div>
+
+                <button type="submit" style="margin-top: 10px;">建立任務</button>
+            </form>
+    
+            <hr> <h2>任務列表</h2>
+            <div id="task-list-container">
+                <p>目前沒有任何任務。</p>
+            </div>
+
+            <hr> <section id="admin-panel" style="display: none; margin-top: 20px; background-color: #f4f4f4; padding: 10px;">
+                <h2>--- 管理員後台 ---</h2>
+                <h3>使用者管理</h3>
+                <p>您可以在此變更使用者的角色或將其從列表中移除。</p>
+                <h3>使用者管理</h3>
+                <p>您可以在此變更使用者的角色或將其從列表中移除。</p>
+
+                <h3 style="margin-top: 25px;">任務統計儀表板</h3>
+                <p>查看所有已指派及未指派任務的狀態。</p>
+                <table id="stats-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="border: 1px solid #ccc; padding: 5px; text-align: left;">使用者</th>
+                            <th style="border: 1px solid #ccc; padding: 5px; text-align: center;">未完成</th>
+                            <th style="border: 1px solid #ccc; padding: 5px; text-align: center;">進行中</th>
+                            <th style="border: 1px solid #ccc; padding: 5px; text-align: center;">已完成</th>
+                            <th style="border: 1px solid #ccc; padding: 5px; text-align: center;">總計</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-table-body">
+                        <tr><td colspan="5" style="padding: 8px; text-align: center;">正在載入統計資料...</td></tr>
+                    </tbody>
+                </table>
+                <h3 style="margin-top: 25px;">使用者列表</h3> <table id="user-management-table" style="width: 100%; border-collapse: collapse;">
+                    </table>
+            </section>
+                <table id="user-management-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="border: 1px solid #ccc; padding: 5px; text-align: left;">使用者 (Email)</th>
+                            <th style="border: 1px solid #ccc; padding: 5px; text-align: left;">目前角色</th>
+                            <th style="border: 1px solid #ccc; padding: 5px; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-list-body">
+                        </tbody>
+                </table>
+            </section>
+
+        </section>
+        </section>
+
+        <div id="comments-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span id="close-comments-btn" class="close-btn">&times;</span>
+                <h2>任務討論</h2>
+                <h3 id="comments-task-name"></h3> <div id="comments-list-container">
+                    </div>
+                
+                <form id="add-comment-form">
+                    <textarea id="comment-text" placeholder="輸入您的留言..." required></textarea>
+                    <button type="submit">送出留言</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+    <script src="script.js"></script>
+</body>
+</html>

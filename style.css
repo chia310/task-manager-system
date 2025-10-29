@@ -1,0 +1,217 @@
+/* --- 1. 全域與基本樣式 --- */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    line-height: 1.6;
+    background-color: #f4f7f6; /* 換一個柔和的背景色 */
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+main {
+    max-width: 900px; /* 讓內容集中，不要太寬 */
+    margin: 0 auto; /* 頁面置中 */
+}
+
+header {
+    background-color: #ffffff;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+}
+
+h1, h2, h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+h2 {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
+/* 統一所有輸入框/按鈕的樣式 */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+    width: 100%;
+    padding: 8px 12px;
+    margin: 0;
+    box-sizing: border-box; /* 關鍵！讓 padding 不會撐爆寬度 */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+textarea {
+    min-height: 80px;
+    font-family: inherit; /* 繼承 body 的字體 */
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+button:hover {
+    background-color: #0056b3;
+}
+
+/* --- 2. 「新增任務」表單樣式 --- */
+#create-task-form {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.form-group {
+    display: grid;
+    /* 建立一個 100px 標籤 + 剩餘空間給輸入框 的網格 */
+    grid-template-columns: 100px 1fr; 
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    text-align: right;
+    font-weight: bold;
+}
+
+/* --- 3. 「任務列表」卡片樣式 --- */
+.task-item {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.task-item h3 {
+    font-size: 1.3rem;
+    color: #0056b3; /* 讓標題突出 */
+    margin-bottom: 15px;
+}
+
+/* 任務的詳細資料 (指派給、建立者...) */
+.task-item p {
+    margin: 8px 0;
+    color: #555;
+    display: grid; /* 同樣使用網格對齊 */
+    grid-template-columns: 70px 1fr;
+    align-items: center;
+}
+
+.task-item p strong {
+    color: #111;
+}
+
+/* 任務的操作按鈕區 */
+.task-actions {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 15px; /* 讓元素之間有間距 */
+}
+
+.task-actions label {
+    font-weight: bold;
+    margin: 0;
+}
+
+.task-actions .comments-btn {
+    background-color: #28a745;
+}
+.task-actions .comments-btn:hover {
+    background-color: #218838;
+}
+
+.task-actions .delete-task-btn {
+    background-color: #e63946;
+    margin-left: auto; /* ★ 技巧：將刪除按鈕推到最右邊 */
+}
+.task-actions .delete-task-btn:hover {
+    background-color: #d62828;
+}
+
+/* --- 4. 管理員後台樣式 --- */
+#admin-panel {
+    background-color: #fffde7; /* 淡黃色背景，做為區隔 */
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+/* ★ 修正點 1：讓兩個表格共用樣式 */
+#admin-panel #user-management-table,
+#admin-panel #stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background-color: #fff;
+}
+
+/* ★ 修正點 2：讓兩個表格的「儲存格」共用樣式 */
+#admin-panel #user-management-table th, 
+#admin-panel #user-management-table td,
+#admin-panel #stats-table th,
+#admin-panel #stats-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+/* ★ 修正點 3：讓兩個表格的「標題列」共用樣式 */
+#admin-panel #user-management-table th,
+#admin-panel #stats-table th {
+    background-color: #f9f9f9;
+}
+
+/* ★ 新增點 4：讓「統計表格」的數字置中 */
+#admin-panel #stats-table th:not(:first-child),
+#admin-panel #stats-table td:not(:first-child) {
+    text-align: center;
+}
+
+/* --- 5. 彈出式視窗 (Modal) 樣式 --- */
+/* (這段是我們之前加的，保持不變) */
+.modal {
+    position: fixed; z-index: 10; left: 0; top: 0;
+    width: 100%; height: 100%; overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+    background-color: #fefefe; margin: auto; padding: 20px;
+    border: 1px solid #888; width: 80%; max-width: 500px;
+    position: relative; border-radius: 5px;
+}
+.close-btn {
+    color: #aaa; position: absolute; top: 10px; right: 20px;
+    font-size: 28px; font-weight: bold; cursor: pointer;
+}
+.close-btn:hover, .close-btn:focus { color: black; }
+
+/* (留言相關樣式也保持不變) */
+#comments-list-container {
+    max-height: 300px; overflow-y: auto; border: 1px solid #eee;
+    padding: 10px; margin-bottom: 15px; background-color: #fdfdfd;
+}
+.comment-item { border-bottom: 1px solid #f0f0f0; padding: 8px 2px; }
+.comment-item:last-child { border-bottom: none; }
+.comment-item p { margin: 5px 0; }
+.comment-item small { color: #777; }
+#add-comment-form { display: flex; flex-direction: column; }
+#add-comment-form textarea { width: 100%; min-height: 60px; margin-bottom: 10px; }
