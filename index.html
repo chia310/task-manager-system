@@ -48,9 +48,25 @@
                 <button type="submit" style="margin-top: 10px;">建立任務</button>
             </form>
     
-            <hr> <h2>任務列表</h2>
-            <div id="task-list-container">
-                <p>目前沒有任何任務。</p>
+            <h2>任務列表</h2>
+            <div id="task-list-columns-container"> 
+                <div class="task-column" id="unassigned-tasks">
+                    <h3>🔴 未指派</h3>
+                    <div class="column-content">
+                        </div>
+                </div>
+        
+                <div class="task-column" id="uncompleted-tasks">
+                    <h3>🟡 未完成 (已指派)</h3>
+                    <div class="column-content">
+                        </div>
+                </div>
+        
+                <div class="task-column" id="other-tasks">
+                    <h3>⚪️ 進行中 / 已完成</h3>
+                    <div class="column-content">
+                        </div>
+                </div>
             </div>
 
             <hr> <section id="admin-panel" style="display: none; margin-top: 20px; background-color: #f4f4f4; padding: 10px;">
@@ -78,7 +94,7 @@
                 </table>
                 <h3 style="margin-top: 25px;">使用者列表</h3> <table id="user-management-table" style="width: 100%; border-collapse: collapse;">
                     </table>
-            </section>
+        </section>
                 <table id="user-management-table" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr>

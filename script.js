@@ -2,7 +2,7 @@
 const createTaskForm = document.getElementById('create-task-form');
 const taskNameInput = document.getElementById('summary');
 const taskDescInput = document.getElementById('task-desc');
-const taskListContainer = document.getElementById('task-list-container');
+const taskListContainer = document.getElementById('task-list-columns-container');
 const adminPanel = document.getElementById('admin-panel');
 const userListBody = document.getElementById('user-list-body');
 const commentsModal = document.getElementById('comments-modal');
@@ -48,89 +48,6 @@ const registerButton = document.getElementById('register-button');
 const logoutButton = document.getElementById('logout-button');
 const userEmailDisplay = document.getElementById('user-email');
 
-// --- 1. 註冊功能 (★★★ 升級版 ★★★) ---
-registerButton.addEventListener('click', () => {
-    const email = loginEmailInput.value;
-    const password = loginPasswordInput.value;
-
-    if (!email || !password) {
-        alert('請輸入電子郵件和密碼！');
-        return;
-    }
-
-    auth.createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            // 註冊成功後，我們立刻在 "users" 集合中為他建立一份資料
-            const user = userCredential.user;
-            
-            // 使用 .doc(user.uid) 可以確保 users 集合中的文件 ID 和 Auth 的 user ID 保持一致
-            db.collection("users").doc(user.uid).set({
-                uid: user.uid,
-                email: user.email,
-                role: "業務", // 預設新註冊的使用者為 "業務"
-                displayName: email.split('@')[0] // 預設顯示名稱為 email @ 前的名字
-            })
-            .then(() => {
-                console.log('使用者資料已成功寫入 Firestore');
-                alert('帳號 ' + email + ' 註冊成功！請直接登入。');
-                loginForm.reset(); // 清空表單
-            })
-            .catch((dbError) => {
-                console.error('寫入 Firestore 失敗:', dbError);
-                alert('註冊成功，但建立使用者資料時失敗！');
-            });
-        })
-        .catch((error) => {
-            // 註冊失敗
-            console.error('註冊失敗:', error.message);
-            if (error.code === 'auth/weak-password') {
-                alert('註冊失敗：密碼強度不足，至少需要 6 個字元！');
-            } else if (error.code === 'auth/email-already-in-use') {
-                alert('註冊失敗：這個 Email 已經被註冊了！');
-            } else {
-                alert('註冊失敗：' + error.message);
-            }
-        });
-});
-
-// --- 2. 登入功能 ---
-loginForm.addEventListener('submit', (event) => {
-    event.preventDefault(); // 防止表單提交時頁面重新整理
-
-    const email = loginEmailInput.value;
-    const password = loginPasswordInput.value;
-
-    if (!email || !password) {
-        alert('請輸入電子郵件和密碼！');
-        return;
-    }
-
-    // 使用 Firebase auth 服務來登入
-    auth.signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            // D登入成功
-            console.log('登入成功!', userCredential.user);
-            // 登入成功後要做什麼，我們會在下面的「狀態監聽」中處理
-        })
-        .catch((error) => {
-            // 登入失敗
-            console.error('登入失敗:', error.message);
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                alert('登入失敗：電子郵件或密碼錯誤！');
-            } else {
-                alert('登入失敗：' + error.message);
-            }
-        });
-});
-
-// --- 3. 登出功能 ---
-logoutButton.addEventListener('click', () => {
-    auth.signOut().then(() => {
-        console.log('已成功登出');
-    }).catch((error) => {
-        console.error('登出時發生錯誤:', error);
-    });
-});
 
 // --- 4. 登入狀態監聽 (★★★ 最終修正版 ★★★) ---
 auth.onAuthStateChanged(async (user) => { 
@@ -225,120 +142,69 @@ auth.onAuthStateChanged(async (user) => {
 
 
 
-// --- 5. 建立新任務 (Create) (★★★ 升級版 ★★★) ---
-createTaskForm.addEventListener('submit', (event) => {
-    event.preventDefault(); 
-
-    const taskName = taskNameInput.value;
-    const taskDesc = taskDescInput.value;
-    const currentUser = auth.currentUser;
-    
-    // 獲取指派選單的資訊
-    const assignSelect = document.getElementById('assign-to-user');
-    const assignedToUid = assignSelect.value; // 獲取選中的 UID
-    const assignedToEmail = assignedToUid ? assignSelect.options[assignSelect.selectedIndex].text : "未指派"; // 獲取顯示的文字
-
-    if (!taskName || !currentUser) {
-        alert('請輸入任務標題！');
-        return;
-    }
-
-    // 準備要存入資料庫的任務物件
-    let taskData = {
-        name: taskName,
-        description: taskDesc,
-        status: "未完成", 
-        createdByEmail: currentUser.email, 
-        createdById: currentUser.uid, 
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        // ★ 新增的指派欄位 ★
-        assignedToUid: assignedToUid || null, // 如果沒選，就存 null
-        assignedToDisplay: assignedToEmail // 儲存被指派者的顯示名稱/Email
-    };
-
-    db.collection("tasks").add(taskData)
-    .then((docRef) => {
-        console.log("任務已成功建立:", docRef.id);
-        createTaskForm.reset(); // 清空表單
-        assignSelect.value = ""; // 將指派選單重設為 "暫不指派"
-        if (userData.role === 'Admin') loadStatsDashboard();
-    })
-    .catch((error) => {
-        console.error("建立任務時發生錯誤:", error);
-        alert('建立任務失敗！');
-    });
-});
-
-// --- 6. 讀取與顯示任務 (Read) (★★★ 升級版，Admin 可編輯指派 ★★★) ---
+// --- 6. 讀取與顯示任務 (★★★ 最終三欄式版本 ★★★) ---
 function displayTasks(tasks) {
-    taskListContainer.innerHTML = ''; 
-    if (tasks.length === 0) {
-        taskListContainer.innerHTML = '<p>目前沒有任何任務。</p>';
+    // 1. 抓取三個欄位的容器
+    const unassignedContainer = document.querySelector('#unassigned-tasks .column-content');
+    const uncompletedContainer = document.querySelector('#uncompleted-tasks .column-content');
+    const otherContainer = document.querySelector('#other-tasks .column-content');
+
+    // 2. 清空所有欄位的舊內容
+    if (!unassignedContainer || !uncompletedContainer || !otherContainer) {
+        console.error("無法找到所有任務欄位容器！");
         return;
     }
+    unassignedContainer.innerHTML = ''; 
+    uncompletedContainer.innerHTML = ''; 
+    otherContainer.innerHTML = ''; 
+
     const currentUser = auth.currentUser; 
 
+    // 3. 將任務分類放入對應容器
     tasks.forEach(task => {
         const taskData = task.data(); 
         const taskId = task.id; 
 
+        // --- (建立 taskElement 的程式碼與之前完全相同) ---
         const taskElement = document.createElement('div');
         taskElement.classList.add('task-item'); 
         taskElement.setAttribute('data-id', taskId); 
 
+        // 根據狀態和指派加入 CSS Class (這會影響卡片自身背景色)
+        if (taskData.status === '未完成') {
+            taskElement.classList.add('status-uncompleted'); 
+        }
+        if (!taskData.assignedToUid) { 
+            taskElement.classList.add('assignment-unassigned'); 
+        }
+        // --- (以上建立 taskElement 不變) ---
+
         const assignedToText = taskData.assignedToDisplay || "未指派"; 
-        
         const isCreator = currentUser && currentUser.uid === taskData.createdById;
         const isAdmin = userData && userData.role === 'Admin';
         const isAssigned = currentUser && currentUser.uid === taskData.assignedToUid;
-
         const canDelete = (isAdmin || isCreator);
         const canUpdateStatus = (isAdmin || isCreator || isAssigned);
 
-        // ★★★ 新邏輯：決定「指派對象」欄位要如何顯示 ★★★
         let assignedToHTML = '';
-        if (isAdmin) {
-            // 如果是 Admin，就建立一個完整的下拉選單
+        if (isAdmin) { /* ... (Admin 下拉選單 HTML 不變) ... */ 
             let optionsHTML = '<option value="">-- 暫不指派 --</option>';
-            
-            // (我們假設 allUsersList 已經被 loadUsersDropdown 填滿了)
             let leadsGroup = '<optgroup label="教學組長">';
             let salesGroup = '<optgroup label="業務同仁">';
             let adminGroup = '<optgroup label="管理員">';
-
-            allUsersList.forEach(user => {
-                const selected = (user.uid === taskData.assignedToUid) ? 'selected' : '';
-                const option = `<option value="${user.uid}" ${selected}>${user.displayName || user.email}</option>`;
-                
-                if (user.role === '教學組長') leadsGroup += option;
-                else if (user.role === '業務') salesGroup += option;
-                else if (user.role === 'Admin') adminGroup += option;
-            });
-
-            leadsGroup += '</optgroup>';
-            salesGroup += '</optgroup>';
-            adminGroup += '</optgroup>';
+            allUsersList.forEach(user => { const selected = (user.uid === taskData.assignedToUid) ? 'selected' : ''; const option = `<option value="${user.uid}" ${selected}>${user.displayName || user.email}</option>`; if (user.role === '教學組長') leadsGroup += option; else if (user.role === '業務') salesGroup += option; else if (user.role === 'Admin') adminGroup += option; });
+            leadsGroup += '</optgroup>'; salesGroup += '</optgroup>'; adminGroup += '</optgroup>';
             optionsHTML += adminGroup + leadsGroup + salesGroup;
-
-            // `data-task-id` 是為了讓監聽器知道要更新哪一筆
-            assignedToHTML = `
-                <p><strong>指派給：</strong>
-                    <select class="assign-task-select" data-task-id="${taskId}">
-                        ${optionsHTML}
-                    </select>
-                </p>`;
+            assignedToHTML = `<p class="task-meta"><strong>指派給：</strong><select class="assign-task-select" data-task-id="${taskId}">${optionsHTML}</select></p>`;
         } else {
-            // 如果是 F般使用者，就只顯示純文字
-            assignedToHTML = `<p><strong>指派給：</strong>${assignedToText}</p>`;
+             assignedToHTML = `<p class="task-meta"><strong>指派給：</strong><span>${assignedToText}</span></p>`; 
         }
-        // ★★★ 新邏輯結束 ★★★
 
         taskElement.innerHTML = `
             <h3>${taskData.name}</h3>
-            <p>${taskData.description}</p>
-            
-            ${assignedToHTML} <p><small>建立者：${taskData.createdByEmail}</small></p>
-            
+            <p class="task-description">${taskData.description}</p> 
+            ${assignedToHTML} 
+            <p class="task-meta"><small>建立者：</small><span>${taskData.createdByEmail}</span></p> 
             <div class="task-actions">
                 <label for="status-select-${taskId}"><strong>狀態：</strong></label>
                 <select class="status-select" data-id="${taskId}" ${!canUpdateStatus ? 'disabled' : ''}>
@@ -346,66 +212,32 @@ function displayTasks(tasks) {
                     <option value="進行中" ${taskData.status === '進行中' ? 'selected' : ''}>進行中</option>
                     <option value="已完成" ${taskData.status === '已完成' ? 'selected' : ''}>已完成</option>
                 </select>
-
                 <button class="comments-btn" data-id="${taskId}" data-name="${taskData.name}">留言</button>
                 ${canDelete ? `<button class="delete-task-btn" data-id="${taskId}">刪除任務</button>` : ''}
             </div>
         `;
-        taskListContainer.appendChild(taskElement);
-    });
-}
 
-// --- ★★★ 修改「登入狀態監聽」函式 ★★★ ---
-// 我們需要升級舊的 onAuthStateChanged 函式，
-// 讓它在使用者登入後，自動去讀取任務列表
-//
-//
-auth.onAuthStateChanged((user) => {
-
-    let tasksListener = null; 
-
-    if (user) {
-        // --- 使用者已登入 ---
-        console.log('使用者已登入:', user.email);
-
-        taskDashboard.style.display = 'block';
-        authContainer.style.display = 'none';
-        userEmailDisplay.textContent = user.email;
-
-        // ★★★ 新增：呼叫函式來載入使用者名單 ★★★
-        loadUsersDropdown();
-
-        // ★★★【新功能】即時監聽任務列表 ★★★
-        // .orderBy("createdAt", "desc") 讓最新的任務顯示在最上面
-        tasksListener = db.collection("tasks")
-            .orderBy("createdAt", "desc")
-            .onSnapshot((snapshot) => {
-                // 當資料庫有任何變動時，這段程式碼就會自動執行
-                console.log("偵測到任務資料變動！");
-                const tasks = snapshot.docs; // 取得所有任務的文件
-                displayTasks(tasks); // 呼叫函式來更新畫面
-            }, (error) => {
-                console.error("讀取任務時發生錯誤:", error);
-                alert('讀取任務列表失敗！');
-            });
-
-    } else {
-        // --- 使用者已登出 ---
-        console.log('使用者已登出');
-        userData = null;
-
-        taskDashboard.style.display = 'none';
-        authContainer.style.display = 'block';
-
-        // ★★★【新功能】停止監聽 ★★★
-        // 當使用者登出時，我們必須停止監聽資料庫，以節省資源
-        if (tasksListener) {
-            tasksListener(); // 呼叫這個函式即可停止監聽
-            console.log("已停止監聽任務列表");
+        // ★★★ 核心邏輯：判斷任務該放入哪一欄 ★★★
+        if (!taskData.assignedToUid) {
+            unassignedContainer.appendChild(taskElement); // 未指派 (紅色)
+        } else if (taskData.status === '未完成') {
+            uncompletedContainer.appendChild(taskElement); // 未完成 (黃色)
+        } else {
+            otherContainer.appendChild(taskElement); // 其他 (白色)
         }
-        taskListContainer.innerHTML = ''; // 清空任務列表
+    });
+
+    // 4. 如果某欄沒有任務，顯示提示文字
+    if (unassignedContainer.innerHTML === '') {
+        unassignedContainer.innerHTML = '<p>目前沒有未指派的任務。</p>';
     }
-});
+    if (uncompletedContainer.innerHTML === '') {
+        uncompletedContainer.innerHTML = '<p>目前沒有待辦的任務。</p>';
+    }
+    if (otherContainer.innerHTML === '') {
+        otherContainer.innerHTML = '<p>目前沒有進行中或已完成的任務。</p>';
+    }
+}
 
 // --- 7. 載入使用者名單到下拉選單 (★★★ 升級版，含快取 ★★★) ---
 async function loadUsersDropdown(selectElementId) {
@@ -520,29 +352,6 @@ async function deleteUser(uid, userEmail) {
     }
 }
 
-// --- 11. 啟動管理面板的事件監聽 ---
-// 我們使用事件委派，來監聽整個表格的點擊事件
-userListBody.addEventListener('click', (event) => {
-    const target = event.target;
-    const uid = target.dataset.uid;
-
-    if (target.classList.contains('delete-user-btn') && uid) {
-        // 點擊了刪除按鈕
-        const userEmail = target.closest('tr').firstElementChild.textContent;
-        deleteUser(uid, userEmail);
-    }
-});
-
-userListBody.addEventListener('change', (event) => {
-    const target = event.target;
-    const uid = target.dataset.uid;
-
-    if (target.classList.contains('role-select') && uid) {
-        // 變更了角色下拉選單
-        const newRole = target.value;
-        updateUserRole(uid, newRole);
-    }
-});
 
 // --- 12. 更新任務狀態 (Update) ---
 async function updateTaskStatus(taskId, newStatus) {
@@ -573,44 +382,6 @@ async function deleteTask(taskId, taskName) {
     }
 }
 
-// --- 14. 啟動任務列表的事件監聽 (Update & Delete) ---
-// 我們使用事件委派，來監聽整個列表容器的事件
-taskListContainer.addEventListener('change', (event) => {
-    const target = event.target;
-    if (target.classList.contains('status-select')) {
-        // 使用者變更了狀態下拉選單
-        const taskId = target.dataset.id;
-        const newStatus = target.value;
-        updateTaskStatus(taskId, newStatus);
-    }
-
-    if (target.classList.contains('assign-task-select')) {
-        const taskId = target.dataset.taskId;
-        const newUid = target.value;
-        const newDisplayName = newUid ? target.options[target.selectedIndex].text : "未指派";
-
-        // 呼叫我們即將建立的新函式
-        updateTaskAssignment(taskId, newUid, newDisplayName);
-    }
-});
-
-taskListContainer.addEventListener('click', (event) => {
-    const target = event.target;
-    // 監聽留言按鈕
-    if (target.classList.contains('comments-btn')) {
-        const taskId = target.dataset.id;
-        const taskName = target.dataset.name;
-        openCommentsModal(taskId, taskName); // 呼叫函式打開彈窗
-    }
-
-    if (target.classList.contains('delete-task-btn')) {
-        // 使用者點擊了刪除按鈕
-        const taskId = target.dataset.id;
-        // 找到任務標題，用於確認提示框
-        const taskName = target.closest('.task-item').querySelector('h3').textContent;
-        deleteTask(taskId, taskName);
-    }
-});
 
 // --- 15. 留言功能相關 ---
 
@@ -677,48 +448,6 @@ function displayComments(comments) {
     commentsListContainer.scrollTop = commentsListContainer.scrollHeight;
 }
 
-// --- 16. 監聽彈窗的關閉與提交事件 ---
-
-// 監聽：關閉按鈕 (X)
-closeCommentsBtn.addEventListener('click', closeCommentsModal);
-
-// 監聽：點擊彈窗外部的灰色區域也會關閉
-window.addEventListener('click', (event) => {
-    if (event.target == commentsModal) {
-        closeCommentsModal();
-    }
-});
-
-// 監聽：新增留言表單的「送出」按鈕
-addCommentForm.addEventListener('submit', async (event) => {
-    event.preventDefault(); // 防止表單提交
-    
-    const commentText = commentTextInput.value;
-    const currentUser = auth.currentUser;
-
-    if (!commentText || !currentUser || !currentOpenTaskId) {
-        alert('無法送出留言，請稍後再試。');
-        return;
-    }
-
-    try {
-        // 在 "tasks" -> {任務ID} -> "comments" 子集合中新增一筆留言
-        await db.collection("tasks").doc(currentOpenTaskId).collection("comments").add({
-            text: commentText,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            createdById: currentUser.uid,
-            createdByEmail: currentUser.email
-        });
-
-        console.log('留言已成功送出！');
-        addCommentForm.reset(); // 清空輸入框
-        // (onSnapshot 監聽器會自動幫我們更新畫面)
-
-    } catch (error) {
-        console.error("送出留言失敗:", error);
-        alert('送出留言失敗！');
-    }
-});
 
 // --- 17. 更新任務指派 (Admin Only) ---
 async function updateTaskAssignment(taskId, newUid, newDisplayName) {
@@ -838,3 +567,247 @@ async function loadStatsDashboard() {
         statsTableBody.innerHTML = '<tr><td colspan="5" style="color: red; padding: 8px; text-align: center;">載入統計失敗！</td></tr>';
     }
 }
+
+// --- ★★★ 頁面載入完成後才執行的程式碼 ★★★ ---
+document.addEventListener('DOMContentLoaded', (event) => {
+    console.log("DOM 已完全載入，開始綁定事件...");
+
+    // --- 1. 註冊功能 ---
+    registerButton.addEventListener('click', () => {
+        const email = loginEmailInput.value;
+        const password = loginPasswordInput.value;
+
+        if (!email || !password) {
+            alert('請輸入電子郵件和密碼！');
+            return;
+        }
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                // 註冊成功後，我們立刻在 "users" 集合中為他建立一份資料
+                const user = userCredential.user;
+                
+                // 使用 .doc(user.uid) 可以確保 users 集合中的文件 ID 和 Auth 的 user ID 保持一致
+                db.collection("users").doc(user.uid).set({
+                    uid: user.uid,
+                    email: user.email,
+                    role: "業務", // 預設新註冊的使用者為 "業務"
+                    displayName: email.split('@')[0] // 預設顯示名稱為 email @ 前的名字
+                })
+                .then(() => {
+                    console.log('使用者資料已成功寫入 Firestore');
+                    alert('帳號 ' + email + ' 註冊成功！請直接登入。');
+                    loginForm.reset(); // 清空表單
+                })
+                .catch((dbError) => {
+                    console.error('寫入 Firestore 失敗:', dbError);
+                    alert('註冊成功，但建立使用者資料時失敗！');
+                });
+            })
+            .catch((error) => {
+                // 註冊失敗
+                console.error('註冊失敗:', error.message);
+                if (error.code === 'auth/weak-password') {
+                    alert('註冊失敗：密碼強度不足，至少需要 6 個字元！');
+                } else if (error.code === 'auth/email-already-in-use') {
+                    alert('註冊失敗：這個 Email 已經被註冊了！');
+                } else {
+                    alert('註冊失敗：' + error.message);
+                }
+            });
+    });
+
+
+    // --- 2. 登入功能 ---
+    loginForm.addEventListener('submit', (event) => {
+        event.preventDefault(); // 防止表單提交時頁面重新整理
+
+        const email = loginEmailInput.value;
+        const password = loginPasswordInput.value;
+
+        if (!email || !password) {
+            alert('請輸入電子郵件和密碼！');
+            return;
+        }
+
+        // 使用 Firebase auth 服務來登入
+        auth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                // D登入成功
+                console.log('登入成功!', userCredential.user);
+                // 登入成功後要做什麼，我們會在下面的「狀態監聽」中處理
+            })
+            .catch((error) => {
+                // 登入失敗
+                console.error('登入失敗:', error.message);
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    alert('登入失敗：電子郵件或密碼錯誤！');
+                } else {
+                    alert('登入失敗：' + error.message);
+                }
+            });
+    });
+
+    // --- 3. 登出功能 ---
+    logoutButton.addEventListener('click', () => {
+        auth.signOut().then(() => {
+            console.log('已成功登出');
+        }).catch((error) => {
+            console.error('登出時發生錯誤:', error);
+        });
+    });
+
+
+    // --- 5. 建立新任務 (Create) ---
+    createTaskForm.addEventListener('submit', (event) => {
+        event.preventDefault(); 
+
+        const taskName = taskNameInput.value;
+        const taskDesc = taskDescInput.value;
+        const currentUser = auth.currentUser;
+        
+        // 獲取指派選單的資訊
+        const assignSelect = document.getElementById('assign-to-user');
+        const assignedToUid = assignSelect.value; // 獲取選中的 UID
+        const assignedToEmail = assignedToUid ? assignSelect.options[assignSelect.selectedIndex].text : "未指派"; // 獲取顯示的文字
+
+        if (!taskName || !currentUser) {
+            alert('請輸入任務標題！');
+            return;
+        }
+
+        // 準備要存入資料庫的任務物件
+        let taskData = {
+            name: taskName,
+            description: taskDesc,
+            status: "未完成", 
+            createdByEmail: currentUser.email, 
+            createdById: currentUser.uid, 
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            // ★ 新增的指派欄位 ★
+            assignedToUid: assignedToUid || null, // 如果沒選，就存 null
+            assignedToDisplay: assignedToEmail // 儲存被指派者的顯示名稱/Email
+        };
+
+        db.collection("tasks").add(taskData)
+        .then((docRef) => {
+            console.log("任務已成功建立:", docRef.id);
+            createTaskForm.reset(); // 清空表單
+            assignSelect.value = ""; // 將指派選單重設為 "暫不指派"
+            if (userData.role === 'Admin') loadStatsDashboard();
+        })
+        .catch((error) => {
+            console.error("建立任務時發生錯誤:", error);
+            alert('建立任務失敗！');
+        });
+    });
+
+    // --- 11. 啟動管理面板的事件監聽 ---
+    // 我們使用事件委派，來監聽整個表格的點擊事件
+    userListBody.addEventListener('click', (event) => {
+        const target = event.target;
+        const uid = target.dataset.uid;
+
+        if (target.classList.contains('delete-user-btn') && uid) {
+            // 點擊了刪除按鈕
+            const userEmail = target.closest('tr').firstElementChild.textContent;
+            deleteUser(uid, userEmail);
+        }
+    });
+
+    userListBody.addEventListener('change', (event) => {
+        const target = event.target;
+        const uid = target.dataset.uid;
+
+        if (target.classList.contains('role-select') && uid) {
+            // 變更了角色下拉選單
+            const newRole = target.value;
+            updateUserRole(uid, newRole);
+        }
+    });
+
+    // --- 14. 啟動任務列表的事件監聽 (Update & Delete) ---
+    // 我們使用事件委派，來監聽整個列表容器的事件
+    taskListContainer.addEventListener('change', (event) => {
+        const target = event.target;
+        if (target.classList.contains('status-select')) {
+            // 使用者變更了狀態下拉選單
+            const taskId = target.dataset.id;
+            const newStatus = target.value;
+            updateTaskStatus(taskId, newStatus);
+        }
+
+        if (target.classList.contains('assign-task-select')) {
+            const taskId = target.dataset.taskId;
+            const newUid = target.value;
+            const newDisplayName = newUid ? target.options[target.selectedIndex].text : "未指派";
+
+            // 呼叫我們即將建立的新函式
+            updateTaskAssignment(taskId, newUid, newDisplayName);
+        }
+    });
+
+    taskListContainer.addEventListener('click', (event) => {
+        const target = event.target;
+        // 監聽留言按鈕
+        if (target.classList.contains('comments-btn')) {
+            const taskId = target.dataset.id;
+            const taskName = target.dataset.name;
+            openCommentsModal(taskId, taskName); // 呼叫函式打開彈窗
+        }
+
+        if (target.classList.contains('delete-task-btn')) {
+            // 使用者點擊了刪除按鈕
+            const taskId = target.dataset.id;
+            // 找到任務標題，用於確認提示框
+            const taskName = target.closest('.task-item').querySelector('h3').textContent;
+            deleteTask(taskId, taskName);
+        }
+    });
+
+    // --- 16. 監聽彈窗的關閉與提交事件 ---
+
+    // 監聽：關閉按鈕 (X)
+    closeCommentsBtn.addEventListener('click', closeCommentsModal);
+
+    // 監聽：點擊彈窗外部的灰色區域也會關閉
+    window.addEventListener('click', (event) => {
+        if (event.target == commentsModal) {
+            closeCommentsModal();
+        }
+    });
+
+    // 監聽：新增留言表單的「送出」按鈕
+    addCommentForm.addEventListener('submit', async (event) => {
+        event.preventDefault(); // 防止表單提交
+        
+        const commentText = commentTextInput.value;
+        const currentUser = auth.currentUser;
+
+        if (!commentText || !currentUser || !currentOpenTaskId) {
+            alert('無法送出留言，請稍後再試。');
+            return;
+        }
+
+        try {
+            // 在 "tasks" -> {任務ID} -> "comments" 子集合中新增一筆留言
+            await db.collection("tasks").doc(currentOpenTaskId).collection("comments").add({
+                text: commentText,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdById: currentUser.uid,
+                createdByEmail: currentUser.email
+            });
+
+            console.log('留言已成功送出！');
+            addCommentForm.reset(); // 清空輸入框
+            // (onSnapshot 監聽器會自動幫我們更新畫面)
+
+        } catch (error) {
+            console.error("送出留言失敗:", error);
+            alert('送出留言失敗！');
+        }
+    });
+
+    console.log("所有事件已綁定完畢。");
+
+});
